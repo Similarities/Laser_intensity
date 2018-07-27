@@ -18,8 +18,9 @@ a0 = Sqrt(I[W/cm^2]*LambdaL^2[mu m^2])/(1.37 x 10^18)
 ---------------
 additional area calculation either by radius, divergence angle or focal length.
 -----------
-angle should be inserted in degree
-length parameters should be inserted in cm
+angle should be inserted rad
+length parameters should be inserted in cm,
+ class main needs needs defocal length in cm // stepsize in calc and plots in (damage_threshold_functional.py) is aligned for 100 mu m //
 -------------
 
 

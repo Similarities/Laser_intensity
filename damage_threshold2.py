@@ -16,13 +16,15 @@ class Intensity_calculation:
         self.IL = IL
         self.a0 = a0
         self.E_flux = E_flux
+        self.content = 0.4
+        self.transmission = 0.56*0.66*self.content
 
 
 
     def calc_I(self):
-        self.IL = self.EL/(self.A * self.tau)
-
-        print(self.name, format(self.IL, ".3E"), "Intensity [W/cm^2]", "reprate:", self.reprate)
+        self.IL = self.EL * self.transmission/(self.A * self.tau)
+        print(self.name, format(self.IL, ".3E"), "Intensity [W/cm^2]", "with", self.content,"fraction of EL in focus")
+        print("xxxxxxxxxxx")
 
     def calc_Eflux(self):
         self.E_flux = self.EL / self.A
@@ -30,30 +32,29 @@ class Intensity_calculation:
 
     def calc_a0(self):
         # 0.15 gives the ratio of energy content in focal region
-        self.a0 = math.sqrt((self.IL* 0.23* self.lambdaL**2)/(1.38*10E18))
-        print(self.name, format(self.a0, "0.3E"), "a0 with 15% energy content in FHWM", "reprate:", self.reprate)
+        self.a0 = math.sqrt((self.IL* self.lambdaL**2)/(1.38*1E18))
+        print(self.name, format(self.a0, "0.3E"), "a0 with:", self.content," energy content in FHWM", "reprate:", self.reprate)
 
-
-# insert (Area, laser energy, pulse duration, "name", repetition rate)
-DamageThreshold1 = Intensity_calculation(1, 3, 25*10E-15, 0.8, "Tien PRL 1999", 1)
-DamageThreshold1.calc_I()
-DamageThreshold1.calc_Eflux()
 
 
 class Beam_Area_calculation:
-    def __init__(self, theta, length, diameter, focalLength, radius, name):
+    def __init__(self, theta, length, diameter, focalLength, radius, lambdaL, name, waist0 = float, waist = float):
         self.theta = theta
         self.length = length
         self.diameter = diameter
         self.focalLength = focalLength
         self.name = name
         self.radius = radius
+        self.lambdaL = lambdaL
+        self.waist0 = waist0
+        self.waist = waist
 
     def angle(self):
         if self.theta == 0 & self.radius == 0:
             self.theta = math.atan(self.diameter * 0.5 /self.focalLength)
             #print(self.name, math.degrees(self.theta), "half angle [degree]")
             print(self.name, format(self.theta, "0.3E"), "half angle [rad]")
+            #print("NA:", self.diameter/(2*self.focalLength))
             #print(self.theta, ' new theta from outside')
 
         elif self.theta < 0 & self.radius == 0:
@@ -71,19 +72,32 @@ class Beam_Area_calculation:
 
 
     def areaCalc_by_angle(self):
-        print(self.focalLength-self.length, "test delta length")
-        self.radius = (self.focalLength-self.length) * math.tan(self.theta)
+        self.radius = (self.length-self.focalLength) * math.tan(self.theta)
         area = math.pi * self.radius ** 2
         print(format(self.radius, "0.3E"), 'radius [cm]', self.name)
         print(format(area, "0.3E"), "Area in [cm`2]", self.name)
         return area
 
     def areaCalc_by_radius(self):
+        print(self.radius)
         area = math.pi * self.radius ** 2
         print(format(self.radius, "0.3E"), 'radius [cm]', self.name)
         print(format(area, "0.3E"), "Area in [cm`2]", self.name)
         return area
 
+    def areaCalc_Gaussian(self):
+        self.waist0 = 0.5*(4 * (self.lambdaL) / math.pi) * self.focalLength / self.diameter
+        print(self.name)
+        #print("diffraction limit (linear) in mum", self.lambdaL/(self.diameter/self.focalLength))
+
+        print("minimum beamwaist w0/2 in mum", format(self.waist0, "0.3E"), "f:", self.focalLength)
+        self.waist = self.waist0 *1E-4 * math.sqrt(1+(self.lambdaL*1E-4 * (self.length-self.focalLength)/(math.pi* self.waist0*1E-4)))
+        print("for f:", self.focalLength, "at length of:", self.length)
+        print('half beamwaist in cm:', format(self.waist, "0.2E"))
+        area = math.pi * (self.waist)**2
+        print("Gaussian calculation", format(area, "0.3E"), "Area in [cm^2]")
+
+        return area
 # insert laser parameter (half angle focusing, distance from focusing optic, D [cm], f[cm], radius[cm],"name")
 
 
@@ -91,29 +105,26 @@ class Beam_Area_calculation:
 class Main:
 
 
+    # (theta[degree],distance[cm],beam diameter [cm], focal lenght[cm], radius of focused beam [cm], lambda L [in mum], name]
 
-    area2 = Beam_Area_calculation(-12, 170, 0, 0, 0, "Area2")
-    area3 = Beam_Area_calculation(0, 170, 0, 0, (0.00006), "Area3")
+   # area3 = Beam_Area_calculation(0, 150, 0, 0, 5*10**-4, 0.8, "Area3")
 
 
-    area2.angle()
-    area2.areaCalc_by_angle()
 
-    iL3 = Intensity_calculation(area3.areaCalc_by_radius(), 3.5, 25*10E-15, 0.8, "no 3:", 1)
-    iL3.calc_I()
-    iL3.calc_a0()
-
-    iL2 = Intensity_calculation(area2.areaCalc_by_angle(), 3.5, 25*10E-15, 0.8, "no 2:", 1)
-    iL2.calc_I()
+    #iL3 = Intensity_calculation(area3.areaCalc_by_radius(), 7.5, 25*1E-15, 0.8, "no 3:", 1)
+    #iL3.calc_I()
+    #iL3.calc_a0()
 
     # calculation for prepulse 10-5
-    area1 = Beam_Area_calculation(0, 149.95, 13, 150, 0, "Area1")
-    area4 = Beam_Area_calculation(0, 149.8+1.3, 13, 150, 0, "Area1 =1cm")
+    area1 = Beam_Area_calculation(0, 150, 13, 150, 0, 0.8, "no1 case 1.5m focal length")
     area1.angle()
-    area4.angle()
-    iL1 = Intensity_calculation(area1.areaCalc_by_angle(), 3.5*10E-5, 25*10E-15, 0.8, "no 1:", 1)
+
+    iL1 = Intensity_calculation(area1.areaCalc_Gaussian(), 7.5, 25*1E-15, 0.8, "no 1:", 1)
     iL1.calc_I()
-    iL4 = Intensity_calculation(area4.areaCalc_by_angle(), 3.5, 25*10E-15, 0.8, "no 1 +1 cm:", 1)
+    iL1.calc_a0()
+    area4 = Beam_Area_calculation(0, 150+1, 13, 150, 0, 0.8, "no1 +1 cm :case1 with 1cm defocusing")
+    area4.angle()
+    iL4 = Intensity_calculation(area4.areaCalc_Gaussian(), 7.5, 25*1E-15, 0.8, "no 1 +1 cm:", 1)
     iL4.calc_I()
 
 
